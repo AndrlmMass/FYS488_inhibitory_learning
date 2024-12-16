@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import correlate
 
-T = 100000  # ms
+T = 1000  # ms
 lambd = 80  # Hz
 N_exc = 8
 N_inh = 2
@@ -86,10 +86,12 @@ def anti_STDP(prev_S, weights, A_plus, A_minus, tau_plus, tau_minus):
             continue
         if delta_t[i] > 0:
             delta_w = -A_minus * np.exp(delta_t[i] / tau_minus)
-            weights[i] = min(-0.1, delta_w)
+            nu_weight = weights[i] + delta_w
+            weights[i] = min(-0.01, nu_weight)
         else:
             delta_w = A_plus * np.exp(-delta_t[i] / tau_plus)
-            weights[i] = min(-0.1, delta_w)
+            nu_weight = weights[i] + delta_w
+            weights[i] = min(-0.01, nu_weight)
     return weights
 
 
@@ -106,14 +108,14 @@ def STDP(prev_S, weights, A_plus, A_minus, tau_plus, tau_minus):
             continue
         if delta_t[i] > 0:
             delta_w = A_plus * np.exp(-delta_t[i] / tau_plus)
-            weights[i] = min(delta_w, -0.01)
+            nu_weight = weights[i] + delta_w
+            weights[i] = min(-0.01, nu_weight)
         else:
             delta_w = -A_minus * np.exp(delta_t[i] / tau_minus)
-            weights[i] = min(-0.01, delta_w)
+            nu_weight = weights[i] + delta_w
+            weights[i] = min(-0.01, nu_weight)
     return weights
 
-
-import matplotlib.pyplot as plt
 
 method_names = ["Anti-Hebbian", "Anti-STDP", "STDP"]
 colors = ["red", "blue", "green"]
@@ -289,6 +291,45 @@ for j in range(3):
     axs[j].set_ylabel("Weight Value")
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show()
+
+
+def plot_std(seq):
+    m = np.mean(seq)
+    n_stdp = np.std(m)
+
+    print(n_stdp)
+
+    x = np.arange(len(seq))
+
+    plt.scatter(x, seq, label="")
+
+    # Plot the mean line
+    plt.axhline(y=m, color="red", linestyle="--", label=f"Mean = {m}")
+
+    # Shade area within one standard deviation
+    plt.fill_between(
+        x,
+        m - n_stdp,
+        m + n_stdp,
+        color="gray",
+        alpha=0.2,
+        label=f"±1 Std Dev ({n_stdp:.2f})",
+    )
+
+    # Add labels and legend
+    plt.title("Binary Sequence with Mean and Standard Deviation")
+    plt.xlabel("Index")
+    plt.ylabel("Value")
+    plt.xticks(x)  # Show all indices
+    plt.yticks([0, 1])  # Only 0 and 1 for binary values
+    plt.legend()
+    plt.grid(alpha=0.3)
+
+    plt.show()
+
+
+for i in range(3):
+    plot_std(all_spikes[i][-2])
 
 
 def mutual_information(seq1, seq2):
